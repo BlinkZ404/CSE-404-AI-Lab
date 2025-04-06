@@ -1,37 +1,6 @@
-def find_all_paths(graph, start, end, path=None, all_paths=None):
-    if path is None:
-        path = []
-    if all_paths is None:
-        all_paths = []
-    
-    # Create a new path list to avoid modifying the original
-    path = path + [start]
-    
-    # If we've reached the destination, add this path to our collection
-    if start == end:
-        all_paths.append(path)
-        return
-    
-    # If this node isn't in the graph (no outgoing edges), stop here
-    if start not in graph:
-        return
-    
-    # Explore all neighbors recursively
-    for neighbor in graph[start]:
-        # Avoid cycles by not revisiting nodes in the current path
-        if neighbor not in path:
-            find_all_paths(graph, neighbor, end, path, all_paths)
-    
-    return all_paths
+import heapq
 
-# Calculate distance for each path and sort by distance
-def calculate_path_distance(graph, path):
-    total = 0
-    for i in range(len(path) - 1):
-        total += graph[path[i]][path[i+1]]
-    return total
-
-# Create the graph from the map
+# Graph with actual distances (g)
 graph = {
     'Lalbag': {'Azimpur': 1.2, 'Palashi': 1.3},
     'Azimpur': {'Nilkhet': 0.55},
@@ -39,31 +8,53 @@ graph = {
     'Nilkhet': {'Green Road': 0.95, 'Katabon': 0.8},
     'Green Road': {'Panthapath': 1.2},
     'Katabon': {'Shahbag': 0.5, 'Saarc Circle': 1.3},
-    'Panthapath': {'UAP': 0.5},
     'Shahbag': {'Saarc Circle': 1.4},
     'Saarc Circle': {'Panthapath': 0.65, 'Farmgate': 0.9},
+    'Panthapath': {'UAP': 0.5},
     'Farmgate': {'UAP': 0.3},
-    'UAP': {} 
+    'UAP': {}
 }
 
-# Find all paths from Lalbag to UAP
-all_paths = find_all_paths(graph, 'Lalbag', 'UAP')
+# Heuristic values (h) 
+heuristics = {
+    'Lalbag': 4.1,
+    'Azimpur': 3.1,
+    'Palashi': 3.1,
+    'Nilkhet': 2.6,
+    'Green Road': 1.7,
+    'Katabon': 1.8,
+    'Shahbag': 2.0,
+    'Saarc Circle': 0.7,
+    'Panthapath': 0.5,
+    'Farmgate': 0.3,
+    'UAP': 0
+}
 
-# Calculate distance for each path and sort by distance
-path_distances = []
-for path in all_paths:
-    distance = calculate_path_distance(graph, path)
-    distance = round(distance, 1)
-    path_distances.append((path, distance))
+def a_star_search(start, goal):
+    open_set = [(heuristics[start], start, [start], 0)]
+    visited = set()
 
-# Sort paths by distance
-path_distances.sort(key=lambda x: x[1])
+    while open_set:
+        f_score, current, path, g_score = heapq.heappop(open_set)
 
-# Display all paths with their distances
-print(f"Found {len(all_paths)} paths from Lalbag to UAP:")
-for i, (path, distance) in enumerate(path_distances, 1):
-    print(f"Path {i}: {' -> '.join(path)} ({distance} km)\n")
+        if current == goal:
+            return path, g_score
 
-# Display the optimal path
-optimal_path, optimal_distance = path_distances[0]
-print(f"\nOptimal path: {' -> '.join(optimal_path)} with distance {optimal_distance} km")
+        if current in visited:
+            continue
+        visited.add(current)
+
+        for neighbor, cost in graph.get(current, {}).items():
+            if neighbor not in visited:
+                new_g = g_score + cost
+                new_f = new_g + heuristics[neighbor]
+                heapq.heappush(open_set, (new_f, neighbor, path + [neighbor], new_g))
+
+    return None, float('inf')
+
+# A* algorithm
+path, total_cost = a_star_search('Lalbag', 'UAP')
+
+# Output the result
+print("Optimal Path:", " -> ".join(path))
+print("Total Cost:", round(total_cost, 2), "km")
